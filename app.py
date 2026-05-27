@@ -28,6 +28,15 @@ from functools import wraps
 
 print("All imports successful! Starting Flask app...")
 
+import os
+
+# Use in-memory SQLite for Vercel (data won't persist)
+# This is just for testing - for production, use PostgreSQL
+if os.environ.get('VERCEL'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///compliance.db'
+
 try:
     from auth import Config
 except ImportError:
