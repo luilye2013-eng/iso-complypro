@@ -44,7 +44,7 @@ except ImportError:
     from datetime import timedelta
     class Config:
         SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-dev-key-change-in-production')
-        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///compliance.db')
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:////tmp/compliance.db')
         SQLALCHEMY_TRACK_MODIFICATIONS = False
         SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
         SESSION_COOKIE_HTTPONLY = True
@@ -65,9 +65,18 @@ from models import db, User, Control, Evidence, AuditLog, ComplianceReport, User
 from auth import login_required, admin_required, audit_log, PasswordValidator
 
 app = Flask(__name__)
+
+# CRITICAL FOR VERCEL: Disable instance folder creation
+app.instance_path = '/tmp/instance'
+app.config['INSTANCE_FOLDER_PATH'] = '/tmp/instance'
+
+# Then your existing config
 app.config.from_object(Config)
 
 # Initialize extensions
+# Ensure the instance path exists in /tmp (writable directory)
+import os
+os.makedirs('/tmp/instance', exist_ok=True)
 db.init_app(app)
 
 # Ensure required directories exist
