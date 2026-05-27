@@ -10,7 +10,31 @@ import secrets
 import string
 from functools import wraps
 
-from config import Config
+# Try to import from config.py, but fall back to environment variables
+try:
+    from config import Config
+except ImportError:
+    import os
+    from datetime import timedelta
+    class Config:
+        SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-dev-key-change-in-production')
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///compliance.db')
+        SQLALCHEMY_TRACK_MODIFICATIONS = False
+        SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+        SESSION_COOKIE_HTTPONLY = True
+        SESSION_COOKIE_SAMESITE = 'Lax'
+        PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+        PASSWORD_MIN_LENGTH = int(os.environ.get('PASSWORD_MIN_LENGTH', 12))
+        PASSWORD_REQUIRE_UPPER = os.environ.get('PASSWORD_REQUIRE_UPPER', 'True').lower() == 'true'
+        PASSWORD_REQUIRE_LOWER = os.environ.get('PASSWORD_REQUIRE_LOWER', 'True').lower() == 'true'
+        PASSWORD_REQUIRE_DIGITS = os.environ.get('PASSWORD_REQUIRE_DIGITS', 'True').lower() == 'true'
+        PASSWORD_REQUIRE_SPECIAL = os.environ.get('PASSWORD_REQUIRE_SPECIAL', 'True').lower() == 'true'
+        PASSWORD_HISTORY_COUNT = int(os.environ.get('PASSWORD_HISTORY_COUNT', 5))
+        MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', 5))
+        LOCKOUT_DURATION = timedelta(minutes=int(os.environ.get('LOCKOUT_DURATION_MINUTES', 30)))
+        MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+        UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']
+        DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
 from models import db, User, Control, Evidence, AuditLog, ComplianceReport, UserStatus, PasswordHistory, Industry, ControlIndustry
 from auth import login_required, admin_required, audit_log, PasswordValidator
 
