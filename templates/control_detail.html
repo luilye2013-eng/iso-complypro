@@ -1,0 +1,110 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ control.control_id }} - ISO ComplyPro{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4>{{ control.control_id }}: {{ control.name }}</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Description:</strong> {{ control.description }}</p>
+                <p><strong>Category:</strong> {{ control.category }}</p>
+                <p><strong>Framework:</strong> {{ control.framework }}</p>
+
+                {% set due_status = control.get_due_date_status() %}
+                {% if due_status[0] %}
+                <p><strong>Due Date Status:</strong> <span class="badge bg-{{ due_status[1] }}">{{ due_status[0] }}</span></p>
+                {% endif %}
+
+                {% if session.role == 'auditor' %}
+                <div class="alert alert-warning">
+                    <strong>👁️ Auditor View:</strong> You have read-only access. You cannot change status or upload evidence.
+                </div>
+                {% endif %}
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Implementation Status</label>
+                        <select name="status" class="form-select" {% if session.role=='auditor' %}disabled{% endif %}>
+                            <option value="not_started" {% if control.status=='not_started' %}selected{% endif %}>Not Started</option>
+                            <option value="in_progress" {% if control.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="implemented" {% if control.status=='implemented' %}selected{% endif %}>Implemented</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Implementation Due Date</label>
+                        <input type="date" name="due_date" class="form-control"
+                               value="{{ control.due_date.strftime('%Y-%m-%d') if control.due_date else '' }}"
+                               {% if session.role=='auditor' %}disabled{% endif %}>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Implementation Notes</label>
+                        <textarea name="notes" class="form-control" rows="4" {% if session.role=='auditor' %}readonly{% endif %}>{{ control.implementation_notes or '' }}</textarea>
+                    </div>
+
+                    {% if session.role != 'auditor' %}
+                    <button type="submit" class="btn btn-primary">Update Status</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {% if session.role != 'auditor' %}
+        <div class="card">
+            <div class="card-header">
+                <h5>Upload Evidence</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/upload-evidence/{{ control.id }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Evidence File</label>
+                        <input type="file" name="evidence_file" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Upload</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if evidence %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Uploaded Evidence</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for item in evidence %}
+                    <li class="list-group-item">
+                        <strong>{{ item.filename }}</strong><br>
+                        <small>Uploaded: {{ item.uploaded_at.strftime('%Y-%m-%d %H:%M') if item.uploaded_at else 'Unknown' }}</small>
+                        {% if item.notes %}
+                        <p class="mt-2 mb-0"><small>{{ item.notes }}</small></p>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if session.role == 'admin' %}
+<script>
+    function confirmDelete(controlId) {
+        if (confirm('Are you sure you want to delete this control? This action cannot be undone.')) {
+            window.location.href = '/admin/delete-control/' + controlId;
+        }
+    }
+</script>
+{% endif %}
+{% endblock %}

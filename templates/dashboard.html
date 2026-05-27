@@ -1,0 +1,97 @@
+﻿{% extends "base.html" %}
+{% block title %}Dashboard - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1 class="mb-4">Welcome, {{ user.username }}!</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <a href="/controls" class="text-decoration-none">
+            <div class="card text-center bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ total_controls }}</h3>
+                    <p>Total Controls</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/controls/implemented" class="text-decoration-none">
+            <div class="card text-center bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ implemented }}</h3>
+                    <p>Implemented</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/controls/in_progress" class="text-decoration-none">
+            <div class="card text-center bg-warning">
+                <div class="card-body">
+                    <h3>{{ in_progress }}</h3>
+                    <p>In Progress</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="/controls/not_started" class="text-decoration-none">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <h3>{{ not_started }}</h3>
+                    <p>Not Started</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Compliance Progress</h5>
+    </div>
+    <div class="card-body text-center">
+        <div class="progress mb-4" style="height: 30px;">
+            <div class="progress-bar bg-success" style="width: {{ compliance_score }}%;">
+                {{ "%.1f"|format(compliance_score) }}% Complete
+            </div>
+        </div>
+
+        <div class="compliance-score-circle mx-auto" style="width: 120px; height: 120px; border-radius: 50%; background: #f8f9fa; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 3px solid #007bff;">
+            <div class="text-center">
+                <div class="score-number" style="font-size: 36px; font-weight: bold;">{{ "%.0f"|format(compliance_score) }}%</div>
+                <small>Compliant</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if recent_audits %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Recent Activity</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr><th>Time</th><th>Action</th><th>Entity</th></tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_audits %}
+                    <tr>
+                        <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else 'Unknown' }}
+        </div>
+        <td>{{ log.action }}
+    </div>
+    <td>{{ log.entity_type }}:{{ log.entity_id or 'N/A' }}
+</div>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

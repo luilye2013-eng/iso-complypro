@@ -1,0 +1,42 @@
+﻿{% extends "base.html" %}
+{% block title %}Audit Log - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1>Audit Log</h1>
+
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>User ID</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>IP Address</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else 'N/A' }}</td>
+                <td>{{ log.user_id or 'System' }}</td>
+                <td>{{ log.action }}</td>
+                <td>{{ log.entity_type }}:{{ log.entity_id if log.entity_id else 'N/A' }}</td>
+                <td>{{ log.ip_address or 'N/A' }}</td>
+                <td>
+                    {% if log.old_value or log.new_value %}
+                    <small>{{ log.old_value or '' }} → {{ log.new_value or '' }}</small>
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if logs|length == 0 %}
+<div class="alert alert-info">No audit logs found.</div>
+{% endif %}
+{% endblock %}

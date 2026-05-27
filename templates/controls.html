@@ -1,0 +1,75 @@
+﻿{% extends "base.html" %}
+{% block title %}Controls - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1 class="mb-4">Security Controls</h1>
+
+<!-- Filter Buttons -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="/controls" class="btn btn-outline-primary {% if not current_filter %}active{% endif %}">All Controls</a>
+        <a href="/controls/not_started" class="btn btn-outline-danger {% if current_filter == 'not_started' %}active{% endif %}">Not Started</a>
+        <a href="/controls/in_progress" class="btn btn-outline-warning {% if current_filter == 'in_progress' %}active{% endif %}">In Progress</a>
+        <a href="/controls/implemented" class="btn btn-outline-success {% if current_filter == 'implemented' %}active{% endif %}">Implemented</a>
+    </div>
+
+    {% if session.role == 'admin' %}
+    <a href="/admin/add-control" class="btn btn-primary float-end">+ Add New Control</a>
+    {% endif %}
+</div>
+
+<!-- Controls by Category -->
+{% for category, controls_list in categories.items() %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5>{{ category }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for control in controls_list %}
+                    <tr>
+                        <td><code>{{ control.control_id }}</code></td>
+                        <td>{{ control.name }}
+        </div>
+        <td>
+            <span class="status-badge status-{{ control.status.replace('_', '-') }}">
+                {{ control.status.replace('_', ' ') | title }}
+            </span>
+    </div>
+    <td>
+        {% if control.due_date %}
+        {% set due_status = control.get_due_date_status() %}
+        {% if due_status[0] %}
+        <span class="badge bg-{{ due_status[1] }}">{{ due_status[0] }}</span>
+        {% else %}
+        <span class="text-muted">Not set</span>
+        {% endif %}
+        {% else %}
+        <span class="text-muted">Not set</span>
+        {% endif %}
+</div>
+<td>
+    <a href="/control/{{ control.id }}" class="btn btn-sm btn-primary">View Details</a></div>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </div>
+    </div>
+    {% endfor %}
+
+    {% if categories|length == 0 %}
+    <div class="alert alert-info">No controls found matching the selected filter.</div>
+    {% endif %}
+    {% endblock %}

@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Database files - CRITICAL: Do not commit these!
+*.db
+*.sqlite
+*.sqlite3
+instance/
+*.db-journal
+
+# Uploaded files - contains user data
+uploads/
+media/
+files/
+user_uploads/
+
+# Environment variables - contains secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Flask
+instance/
+.webassets-cache
+
+# Secrets and config
+config_local.py
+secrets.py
+secret_key.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.user
+
+# Logs
+*.log
+logs/
+error_logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.tmp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Project specific - keep example but not actual data
+data/*.db
+data/*.sqlite
+!data/example.json

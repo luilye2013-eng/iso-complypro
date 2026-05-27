@@ -1,0 +1,53 @@
+﻿{% extends "base.html" %}
+{% block title %}Select Applicable Controls - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1 class="mb-4">Select Controls Applicable to Your Organization</h1>
+
+<p class="alert alert-info">
+    <strong>📋 Master Control Library:</strong> The system contains controls from multiple frameworks.
+    Select only the controls that apply to your organization. Unselected controls will be hidden from your dashboard.
+</p>
+
+{% if user_role == 'auditor' %}
+<div class="alert alert-warning">
+    <strong>👁️ Auditor View:</strong> You can view which controls are selected, but cannot change selections.
+</div>
+{% endif %}
+
+<form method="POST">
+    {% for framework, controls_by_category in grouped_controls.items() %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5>{{ framework }}</h5>
+        </div>
+        <div class="card-body">
+            {% for category, controls in controls_by_category.items() %}
+            <div class="mb-3">
+                <h6 class="text-muted">{{ category }}</h6>
+                {% for control in controls %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="control_{{ control.id }}"
+                           id="control_{{ control.id }}" value="true"
+                           {% if control.is_applicable %}checked{% endif %}
+                           {% if user_role=='auditor' %}disabled{% endif %}>
+                    <label class="form-check-label" for="control_{{ control.id }}">
+                        <code>{{ control.control_id }}</code> - {{ control.name }}
+                    </label>
+                    <br>
+                    <small class="text-muted ms-4">{{ control.description[:150] }}...</small>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if user_role != 'auditor' %}
+    <div class="mt-3">
+        <button type="submit" class="btn btn-primary">Save Selections</button>
+        <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+    {% endif %}
+</form>
+{% endblock %}

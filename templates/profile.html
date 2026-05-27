@@ -1,0 +1,43 @@
+﻿{% extends "base.html" %}
+{% block title %}Profile - ISO ComplyPro{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4>User Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <input type="text" class="form-control" value="{{ user.role }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Account Status</label>
+                        <input type="text" class="form-control" value="{{ user.status }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last Login</label>
+                        <input type="text" class="form-control" value="{{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else 'Never' }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Member Since</label>
+                        <input type="text" class="form-control" value="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}" disabled>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Email</button>
+                    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

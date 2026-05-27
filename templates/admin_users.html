@@ -1,0 +1,54 @@
+﻿{% extends "base.html" %}
+{% block title %}User Management - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1>User Management</h1>
+<a href="/admin/add-user" class="btn btn-primary mb-3">+ Add New User</a>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.email }}</td>
+                <td><span class="badge bg-info">{{ u.role }}</span></td>
+                <td>
+                    <span class="badge
+                        {% if u.status == 'active' %}bg-success
+                        {% elif u.status == 'suspended' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ u.status }}
+                    </span>
+                </td>
+                <td>{{ u.last_login.strftime('%Y-%m-%d') if u.last_login else 'Never' }}</td>
+                <td>
+                    <form method="POST" action="/admin/change-user-status/{{ u.id }}" style="display: inline;">
+                        <select name="status" class="form-select form-select-sm" style="width: auto; display: inline-block;">
+                            <option value="active" {% if u.status=='active' %}selected{% endif %}>Active</option>
+                            <option value="suspended" {% if u.status=='suspended' %}selected{% endif %}>Suspend</option>
+                            <option value="deactivated" {% if u.status=='deactivated' %}selected{% endif %}>Deactivate</option>
+                        </select>
+                        <input type="text" name="reason" placeholder="Reason" class="form-control form-control-sm" style="width: 150px; display: inline-block;">
+                        <button type="submit" class="btn btn-sm btn-warning">Update</button>
+                    </form>
+
+                    <form method="POST" action="/admin/reset-user-password/{{ u.id }}" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Reset password for {{ u.username }}?')">Reset PW</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

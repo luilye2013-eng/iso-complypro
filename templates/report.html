@@ -1,0 +1,81 @@
+﻿{% extends "base.html" %}
+{% block title %}Report - ISO ComplyPro{% endblock %}
+{% block content %}
+<h1 class="mb-4">Compliance Report</h1>
+
+<p><strong>Generated:</strong> {{ report.generated_at }}</p>
+
+{% if report.total_controls == 0 %}
+<div class="alert alert-warning">
+    <strong>⚠️ No Controls Found:</strong> There are no security controls in the system yet.
+    Please add controls or load the master library.
+</div>
+{% else %}
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h3>{{ report.implemented }}</h3>
+                <p>Implemented</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-warning">
+            <div class="card-body">
+                <h3>{{ report.in_progress }}</h3>
+                <p>In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body">
+                <h3>{{ report.not_started }}</h3>
+                <p>Not Started</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3>Compliance by Category</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Total</th>
+            <th>Implemented</th>
+            <th>Compliance %</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for category, data in report.by_category.items() %}
+        <tr>
+            <td>{{ category }}</div>
+            <td>{{ data.total }}</div>
+            <td>{{ data.implemented }}</div>
+            <td>
+                <div class="progress">
+                    <div class="progress-bar bg-success" style="width: {{ (data.implemented / data.total * 100) if data.total > 0 else 0 }}%;">
+                        {{ "%.0f"|format((data.implemented / data.total * 100) if data.total > 0 else 0) }}%
+                    </div>
+                </div>
+                </div>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <h3>Overall Score: {{ "%.1f"|format(report.overall_score) }}%</h3>
+    <div class="progress" style="height: 40px;">
+        <div class="progress-bar bg-success" style="width: {{ report.overall_score }}%;">
+            {{ "%.1f"|format(report.overall_score) }}% Compliant
+        </div>
+    </div>
+</div>
+
+<a href="/export/csv" class="btn btn-success mt-3">Export to CSV</a>
+{% endif %}
+{% endblock %}
