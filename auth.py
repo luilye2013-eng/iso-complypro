@@ -6,32 +6,42 @@ from flask import session, request, flash, redirect, url_for
 from functools import wraps
 from models import User, PasswordHistory, AuditLog, db
 
-try:
-    from config import Config
-    print("Auth: Config loaded from config.py")
-except ImportError:
-    import os
-    from datetime import timedelta
-    class Config:
-        SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-dev-key-change-in-production')
-        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///compliance.db')
-        SQLALCHEMY_TRACK_MODIFICATIONS = False
-        SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
-        SESSION_COOKIE_HTTPONLY = True
-        SESSION_COOKIE_SAMESITE = 'Lax'
-        PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
-        PASSWORD_MIN_LENGTH = int(os.environ.get('PASSWORD_MIN_LENGTH', 12))
-        PASSWORD_REQUIRE_UPPER = os.environ.get('PASSWORD_REQUIRE_UPPER', 'True').lower() == 'true'
-        PASSWORD_REQUIRE_LOWER = os.environ.get('PASSWORD_REQUIRE_LOWER', 'True').lower() == 'true'
-        PASSWORD_REQUIRE_DIGITS = os.environ.get('PASSWORD_REQUIRE_DIGITS', 'True').lower() == 'true'
-        PASSWORD_REQUIRE_SPECIAL = os.environ.get('PASSWORD_REQUIRE_SPECIAL', 'True').lower() == 'true'
-        PASSWORD_HISTORY_COUNT = int(os.environ.get('PASSWORD_HISTORY_COUNT', 5))
-        MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', 5))
-        LOCKOUT_DURATION = timedelta(minutes=int(os.environ.get('LOCKOUT_DURATION_MINUTES', 30)))
-        MAX_CONTENT_LENGTH = 16 * 1024 * 1024
-        UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']
-        DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    print("Auth: Using fallback config from environment variables")
+# ========== CONFIGURATION FALLBACK (No external config.py needed) ==========
+import os
+from datetime import timedelta
+
+class Config:
+    """Configuration class - no external file needed"""
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///compliance.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Session configuration
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+    
+    # Password policy
+    PASSWORD_MIN_LENGTH = int(os.environ.get('PASSWORD_MIN_LENGTH', 12))
+    PASSWORD_REQUIRE_UPPER = os.environ.get('PASSWORD_REQUIRE_UPPER', 'True').lower() == 'true'
+    PASSWORD_REQUIRE_LOWER = os.environ.get('PASSWORD_REQUIRE_LOWER', 'True').lower() == 'true'
+    PASSWORD_REQUIRE_DIGITS = os.environ.get('PASSWORD_REQUIRE_DIGITS', 'True').lower() == 'true'
+    PASSWORD_REQUIRE_SPECIAL = os.environ.get('PASSWORD_REQUIRE_SPECIAL', 'True').lower() == 'true'
+    PASSWORD_HISTORY_COUNT = int(os.environ.get('PASSWORD_HISTORY_COUNT', 5))
+    
+    # Account lockout
+    MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', 5))
+    LOCKOUT_DURATION = timedelta(minutes=int(os.environ.get('LOCKOUT_DURATION_MINUTES', 30)))
+    
+    # File upload
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+    UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']
+    
+    # Environment
+    DEBUG = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+# ========== END CONFIGURATION ==========
+
 
 class PasswordValidator:
     """Enforce password complexity requirements"""
@@ -84,6 +94,7 @@ class PasswordValidator:
         """Hash password with secure defaults"""
         return generate_password_hash(password, method='scrypt')
 
+
 def login_required(f):
     """Decorator to require authentication"""
     @wraps(f)
@@ -107,6 +118,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
 def admin_required(f):
     """Decorator to require admin role"""
     @wraps(f)
@@ -116,6 +128,7 @@ def admin_required(f):
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
+
 
 def audit_log(user_id, action, entity_type=None, entity_id=None, old_value=None, new_value=None):
     """Create audit log entry"""

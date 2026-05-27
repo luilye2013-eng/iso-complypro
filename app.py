@@ -10,9 +10,9 @@ import secrets
 import string
 from functools import wraps
 
-# Try to import from config.py, but fall back to environment variables
+
 try:
-    from config import Config
+    from auth import Config
 except ImportError:
     import os
     from datetime import timedelta
