@@ -5,6 +5,8 @@ from enum import Enum
 
 db = SQLAlchemy()
 
+# Rest of your models...
+
 class UserStatus(Enum):
     ACTIVE = 'active'
     SUSPENDED = 'suspended'
