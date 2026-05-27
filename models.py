@@ -60,13 +60,7 @@ class User(db.Model):
             return True
         return False
     
-    def increment_login_attempts(self):
-        from config import Config
-        self.login_attempts += 1
-        if self.login_attempts >= Config.MAX_LOGIN_ATTEMPTS:
-            from datetime import timedelta
-            self.locked_until = datetime.utcnow() + Config.LOCKOUT_DURATION
-        db.session.commit()
+ 
     
     def reset_login_attempts(self):
         self.login_attempts = 0
