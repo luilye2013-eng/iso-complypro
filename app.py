@@ -1,4 +1,20 @@
-﻿from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
+﻿import sys
+print("Python path:", sys.path)
+print("Starting app.py...")
+
+# Force Python to look in the current directory
+import os
+sys.path.insert(0, os.getcwd())
+
+import sys
+import os
+
+# Print debug info
+print(f"Python version: {sys.version}")
+print(f"Current directory: {os.getcwd()}")
+print(f"Files in directory: {os.listdir('.')}")
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta, date
@@ -10,6 +26,7 @@ import secrets
 import string
 from functools import wraps
 
+print("All imports successful! Starting Flask app...")
 
 try:
     from auth import Config
