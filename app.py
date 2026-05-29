@@ -51,7 +51,7 @@ class Config:
 app.config.from_object(Config)
 
 # ========== IMPORT MODULES ==========
-from models import db, User, Control, Evidence, AuditLog, ComplianceReport, UserStatus, PasswordHistory, Industry, ControlIndustry
+from models import db, User, Control, Evidence, AuditLog, ComplianceReport, UserStatus, PasswordHistory
 from auth import login_required, admin_required, audit_log, PasswordValidator
 
 # Initialize database
@@ -59,11 +59,8 @@ db.init_app(app)
 
 # ========== INITIALIZATION FUNCTIONS ==========
 def load_initial_controls():
-    """Load controls directly from Python list - runs only once"""
     if Control.query.count() > 0:
-        print(f"Controls already exist: {Control.query.count()} controls")
         return
-    
     controls_data = [
         {"id": "ISO-27001-A.5.1", "name": "Information security policy", "description": "Policies for information security should be defined.", "category": "Information Security Policies"},
         {"id": "ISO-27001-A.6.1", "name": "Information security roles", "description": "Information security responsibilities should be defined.", "category": "Organization"},
@@ -71,7 +68,6 @@ def load_initial_controls():
         {"id": "ISO-27001-A.8.1", "name": "Inventory of assets", "description": "Assets should be identified and documented.", "category": "Asset Management"},
         {"id": "ISO-27001-A.9.1", "name": "Access control policy", "description": "An access control policy should be established.", "category": "Access Control"},
     ]
-    
     for data in controls_data:
         control = Control(
             control_id=data["id"],
@@ -83,12 +79,9 @@ def load_initial_controls():
             is_active_in_library=True
         )
         db.session.add(control)
-    
     db.session.commit()
-    print(f"✅ Loaded {len(controls_data)} controls")
 
 def create_admin_user():
-    """Create default admin user if none exists"""
     if User.query.count() == 0:
         temp_password = "AdminTemp2024!First"
         admin = User(
@@ -104,23 +97,84 @@ def create_admin_user():
         db.session.commit()
         print(f"Admin created - Username: admin, Temp Password: {temp_password}")
 
-# ========== ROUTES ==========
+# ========== LOGIN ROUTE ==========
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter((User.username == username) | (User.email == username)).first()
+        if not user:
+            flash('Invalid username or password', 'danger')
+            return render_template('login.html')
+        if user.status == 'suspended':
+            flash('Account suspended. Contact administrator.', 'danger')
+            return render_template('login.html')
+        if user.status == 'deactivated':
+            flash('Account deactivated. Contact administrator.', 'danger')
+            return render_template('login.html')
+        if user.is_locked_out():
+            flash('Account is locked. Try again later.', 'danger')
+            return render_template('login.html')
+        if check_password_hash(user.password_hash, password):
+            user.reset_login_attempts()
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session['role'] = user.role
+            if user.force_password_change:
+                return redirect(url_for('force_password_change'))
+            flash(f'Welcome {user.username}!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            user.increment_login_attempts()
+            flash('Invalid password', 'danger')
+    return render_template('login.html')
+
+@app.route('/force-password-change', methods=['GET', 'POST'])
+@login_required
+def force_password_change():
+    user = User.query.get(session['user_id'])
+    if request.method == 'POST':
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        if new_password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return redirect(url_for('force_password_change'))
+        errors = PasswordValidator.validate(new_password, user)
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+            return redirect(url_for('force_password_change'))
+        user.password_hash = PasswordValidator.hash_password(new_password)
+        user.force_password_change = False
+        db.session.commit()
+        flash('Password changed successfully!', 'success')
+        return redirect(url_for('dashboard'))
+    return render_template('force_password_change.html', user=user)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out', 'info')
+    return redirect(url_for('login'))
+
 @app.route('/')
 @app.route('/dashboard')
 @login_required
 def dashboard():
     user = User.query.get(session['user_id'])
     all_controls = Control.query.filter_by(is_active_in_library=True).all()
-    total_controls = len(all_controls)
+    total = len(all_controls)
     implemented = sum(1 for c in all_controls if c.status == 'implemented')
     in_progress = sum(1 for c in all_controls if c.status == 'in_progress')
     not_started = sum(1 for c in all_controls if c.status == 'not_started')
-    compliance_score = (implemented / total_controls * 100) if total_controls > 0 else 0
-    recent_audits = AuditLog.query.filter_by(user_id=user.id).order_by(AuditLog.created_at.desc()).limit(10).all()
-    return render_template('dashboard.html', user=user, total_controls=total_controls, implemented=implemented, in_progress=in_progress, not_started=not_started, compliance_score=compliance_score, assigned_controls=all_controls, recent_audits=recent_audits)
+    score = (implemented / total * 100) if total > 0 else 0
+    return render_template('dashboard.html', user=user, total_controls=total, implemented=implemented, in_progress=in_progress, not_started=not_started, compliance_score=score, assigned_controls=all_controls)
 
 # ========== ADD YOUR OTHER ROUTES HERE ==========
-# (Keep all your existing @app.route functions - login, logout, controls, etc.)
+# (Add @app.route for /controls, /control/<id>, /report, /admin/users, etc.)
 
 # ========== INITIALIZE DATABASE ==========
 with app.app_context():
