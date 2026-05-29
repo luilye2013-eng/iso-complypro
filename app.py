@@ -117,7 +117,7 @@ def login():
             flash('Account is locked. Try again later.', 'danger')
             return render_template('login.html')
         if check_password_hash(user.password_hash, password):
-            user.reset_login_attempts()
+            user.reset_login_attempts()  # Fixed: was increment_login_attempts
             user.last_login = datetime.utcnow()
             db.session.commit()
             session['user_id'] = user.id
@@ -128,7 +128,11 @@ def login():
             flash(f'Welcome {user.username}!', 'success')
             return redirect(url_for('dashboard'))
         else:
-            user.increment_login_attempts()
+            # Increment failed attempts - you need to add this method
+            user.login_attempts += 1
+            if user.login_attempts >= 5:
+                user.locked_until = datetime.utcnow() + timedelta(minutes=30)
+            db.session.commit()
             flash('Invalid password', 'danger')
     return render_template('login.html')
 

@@ -69,6 +69,12 @@ class User(db.Model):
         self.locked_until = None
         db.session.commit()
 
+    def increment_login_attempts(self):
+        self.login_attempts += 1
+        if self.login_attempts >= 5:  # Config.MAX_LOGIN_ATTEMPTS
+            self.locked_until = datetime.utcnow() + timedelta(minutes=30)
+        db.session.commit()
+
 class PasswordHistory(db.Model):
     __tablename__ = 'password_history'
     
