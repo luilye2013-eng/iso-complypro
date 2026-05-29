@@ -1,12 +1,9 @@
-from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
 from enum import Enum
 
 db = SQLAlchemy()
-
-# Rest of your models...
 
 class UserStatus(Enum):
     ACTIVE = 'active'
@@ -21,23 +18,19 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    password_updated_at = db.Column(db.DateTime, default=get_local_time)
-    
+    password_updated_at = db.Column(db.DateTime, default=datetime.utcnow)  # Keep UTC for model
     status = db.Column(db.String(20), default=UserStatus.ACTIVE.value)
     force_password_change = db.Column(db.Boolean, default=True)
     is_active = db.Column(db.Boolean, default=True)
-    
     role = db.Column(db.String(50), default='control_owner')
     organization_id = db.Column(db.Integer, default=1)
     industry_focus = db.Column(db.String(100), nullable=True)
-    
     login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
     last_login = db.Column(db.DateTime, nullable=True)
     last_login_ip = db.Column(db.String(45), nullable=True)
-    last_password_change = db.Column(db.DateTime, default=get_local_time)
-    
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    last_password_change = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, nullable=True)
     deactivated_at = db.Column(db.DateTime, nullable=True)
     deactivated_by = db.Column(db.Integer, nullable=True)
@@ -59,34 +52,32 @@ class User(db.Model):
         }
     
     def is_locked_out(self):
-        if self.locked_until and self.locked_until > get_local_time():
+        if self.locked_until and self.locked_until > datetime.utcnow():
             return True
         return False
     
- 
+    def increment_login_attempts(self):
+        from config import Config
+        self.login_attempts += 1
+        if self.login_attempts >= Config.MAX_LOGIN_ATTEMPTS:
+            from datetime import timedelta
+            self.locked_until = datetime.utcnow() + Config.LOCKOUT_DURATION
+        db.session.commit()
     
     def reset_login_attempts(self):
         self.login_attempts = 0
         self.locked_until = None
         db.session.commit()
 
-    def increment_login_attempts(self):
-        self.login_attempts += 1
-        if self.login_attempts >= 5:  # Config.MAX_LOGIN_ATTEMPTS
-            self.locked_until = get_local_time() + timedelta(minutes=30)
-        db.session.commit()
-
 class PasswordHistory(db.Model):
     __tablename__ = 'password_history'
-    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Control(db.Model):
     __tablename__ = 'control'
-    
     id = db.Column(db.Integer, primary_key=True)
     control_id = db.Column(db.String(50), unique=True, nullable=False)
     name = db.Column(db.String(200), nullable=False)
@@ -96,16 +87,11 @@ class Control(db.Model):
     status = db.Column(db.String(50), default='not_started')
     implementation_notes = db.Column(db.Text)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    
-    # Due date tracking
     due_date = db.Column(db.DateTime, nullable=True)
-    
-    # New fields for master library approach
     is_applicable = db.Column(db.Boolean, default=True)
     is_active_in_library = db.Column(db.Boolean, default=True)
-    
-    created_at = db.Column(db.DateTime, default=get_local_time)
-    updated_at = db.Column(db.DateTime, default=get_local_time, onupdate=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     updated_by = db.Column(db.Integer, nullable=True)
     
     assignee = db.relationship('User', foreign_keys=[assigned_to])
@@ -130,11 +116,9 @@ class Control(db.Model):
         from datetime import date
         if not self.due_date:
             return None, None
-        
         today = date.today()
         due = self.due_date.date() if hasattr(self.due_date, 'date') else self.due_date
         days_remaining = (due - today).days
-        
         if days_remaining < 0:
             return "Past Due", "danger"
         elif days_remaining <= 7:
@@ -144,14 +128,13 @@ class Control(db.Model):
 
 class Evidence(db.Model):
     __tablename__ = 'evidence'
-    
     id = db.Column(db.Integer, primary_key=True)
     control_id = db.Column(db.Integer, db.ForeignKey('control.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     filename = db.Column(db.String(200))
     file_path = db.Column(db.String(500))
     file_size = db.Column(db.Integer)
-    uploaded_at = db.Column(db.DateTime, default=get_local_time)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
     
     control = db.relationship('Control', backref='evidence')
@@ -159,7 +142,6 @@ class Evidence(db.Model):
 
 class AuditLog(db.Model):
     __tablename__ = 'audit_log'
-    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     action = db.Column(db.String(100), nullable=False)
@@ -169,31 +151,24 @@ class AuditLog(db.Model):
     new_value = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=get_local_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class ComplianceReport(db.Model):
     __tablename__ = 'compliance_report'
-    
     id = db.Column(db.Integer, primary_key=True)
     report_name = db.Column(db.String(200))
     generated_by = db.Column(db.Integer, db.ForeignKey('user.id'))
-    generated_at = db.Column(db.DateTime, default=get_local_time)
+    generated_at = db.Column(db.DateTime, default=datetime.utcnow)
     overall_score = db.Column(db.Float)
     report_data = db.Column(db.Text)
 
 class Industry(db.Model):
     __tablename__ = 'industry'
-    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text)
 
 class ControlIndustry(db.Model):
     __tablename__ = 'control_industry'
-    
     control_id = db.Column(db.Integer, db.ForeignKey('control.id'), primary_key=True)
     industry_id = db.Column(db.Integer, db.ForeignKey('industry.id'), primary_key=True)
-
-def get_local_time():
-    """Return current time in UTC+3 (Kenya timezone)"""
-    return datetime.now() + timedelta(hours=3)
