@@ -1,0 +1,7 @@
+{
+    "_comment": "Example control library - replace with your actual controls",
+    "controls": [
+        {"id": "EXAMPLE-1", "name": "Example Control 1", "description": "This is an example control.", "category": "Example", "framework": "Example"},
+        {"id": "EXAMPLE-2", "name": "Example Control 2", "description": "This is another example.", "category": "Example", "framework": "Example"}
+    ]
+}
