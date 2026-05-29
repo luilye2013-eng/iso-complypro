@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import json
 import csv
 import io
@@ -11,6 +11,11 @@ import secrets
 import string
 import hashlib
 from functools import wraps
+
+# ========== TIMEZONE HELPER (Kenya - UTC+3) ==========
+def get_local_time():
+    """Return current time in UTC+3 (Kenya/Eastern Africa timezone)"""
+    return datetime.now(timezone.utc) + timedelta(hours=3)
 
 # ========== FIX FOR VERCEL READ-ONLY FILESYSTEM ==========
 os.environ['FLASK_SQLALCHEMY_DISABLE_INSTANCE_FOLDER'] = '1'
@@ -134,7 +139,7 @@ def login():
             return render_template('login.html')
         if check_password_hash(user.password_hash, password):
             user.reset_login_attempts()
-            user.last_login = datetime.utcnow()
+            user.last_login = get_local_time()  # Fixed: local time
             db.session.commit()
             session['user_id'] = user.id
             session['username'] = user.username
@@ -147,7 +152,7 @@ def login():
         else:
             user.login_attempts += 1
             if user.login_attempts >= 5:
-                user.locked_until = datetime.utcnow() + timedelta(minutes=30)
+                user.locked_until = get_local_time() + timedelta(minutes=30)  # Fixed: local time
             db.session.commit()
             audit_log(user.id, 'LOGIN_FAILED', 'user', user.id)
             flash('Invalid password', 'danger')
@@ -173,6 +178,8 @@ def force_password_change():
         db.session.add(old_history)
         user.password_hash = PasswordValidator.hash_password(new_password)
         user.force_password_change = False
+        user.password_updated_at = get_local_time()  # Fixed: local time
+        user.last_password_change = get_local_time()  # Fixed: local time
         db.session.commit()
         audit_log(user.id, 'PASSWORD_CHANGED', 'user', user.id)
         flash('Password changed successfully!', 'success')
@@ -194,7 +201,7 @@ def forgot_password():
         user = User.query.filter_by(email=email).first()
         if user:
             # Generate a simple reset token
-            token = hashlib.sha256(f"{user.id}{user.email}{datetime.utcnow().date()}".encode()).hexdigest()[:20]
+            token = hashlib.sha256(f"{user.id}{user.email}{get_local_time().date()}".encode()).hexdigest()[:20]
             reset_link = url_for('reset_password', token=token, _external=True)
             # In production, send email. For now, display the link
             flash(f'Password reset link (copy this): {reset_link}', 'info')
@@ -303,7 +310,7 @@ def upload_evidence(control_id):
     if ext not in app.config['UPLOAD_EXTENSIONS']:
         flash('File type not allowed', 'danger')
         return redirect(url_for('control_detail', control_id=control_id))
-    safe_filename = f"{control.control_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+    safe_filename = f"{control.control_id}_{get_local_time().strftime('%Y%m%d_%H%M%S')}_{filename}"
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
     file.save(filepath)
     evidence = Evidence(control_id=control_id, user_id=session['user_id'], filename=filename, file_path=filepath, file_size=os.path.getsize(filepath), notes=request.form.get('notes', ''))
@@ -425,6 +432,7 @@ def reset_user_password(user_id):
     db.session.add(old_history)
     user.password_hash = PasswordValidator.hash_password(temp_password)
     user.force_password_change = True
+    user.password_updated_at = get_local_time()  # Fixed: local time
     db.session.commit()
     audit_log(session['user_id'], 'PASSWORD_RESET_BY_ADMIN', 'user', user.id)
     flash(f'Password reset for {user.username}. Temp password: {temp_password}', 'warning')
@@ -437,12 +445,12 @@ def report():
     controls = Control.query.all()
     total = len(controls)
     if total == 0:
-        report_data = {'generated_at': datetime.now().isoformat(), 'total_controls': 0, 'implemented': 0, 'in_progress': 0, 'not_started': 0, 'by_category': {}, 'overall_score': 0}
+        report_data = {'generated_at': get_local_time().isoformat(), 'total_controls': 0, 'implemented': 0, 'in_progress': 0, 'not_started': 0, 'by_category': {}, 'overall_score': 0}
         return render_template('report.html', report=report_data)
     implemented = sum(1 for c in controls if c.status == 'implemented')
     in_progress = sum(1 for c in controls if c.status == 'in_progress')
     not_started = sum(1 for c in controls if c.status == 'not_started')
-    report_data = {'generated_at': datetime.now().isoformat(), 'total_controls': total, 'implemented': implemented, 'in_progress': in_progress, 'not_started': not_started, 'by_category': {}}
+    report_data = {'generated_at': get_local_time().isoformat(), 'total_controls': total, 'implemented': implemented, 'in_progress': in_progress, 'not_started': not_started, 'by_category': {}}
     for control in controls:
         if control.category not in report_data['by_category']:
             report_data['by_category'][control.category] = {'total': 0, 'implemented': 0}
