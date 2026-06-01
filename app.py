@@ -101,9 +101,13 @@ def create_admin_user():
         )
         db.session.add(admin)
         db.session.commit()
-        print(f"Admin created - Username: admin, Temp Password: {temp_password}")
+        # Only print in development, not in production logs
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            print(f"Admin created - Username: admin, Temp Password: {temp_password}")
+        else:
+            print("Admin account created. Check environment variables for credentials.")
         
-        # Also create a backup admin
+        # Backup admin
         backup_temp_password = "BackupAdmin2024!Secure"
         backup_admin = User(
             username='backup_admin',
@@ -116,7 +120,6 @@ def create_admin_user():
         )
         db.session.add(backup_admin)
         db.session.commit()
-        print(f"Backup admin created - Username: backup_admin, Temp Password: {backup_temp_password}")
 
 # ========== AUTHENTICATION ROUTES ==========
 @app.route('/login', methods=['GET', 'POST'])
@@ -157,6 +160,59 @@ def login():
             audit_log(user.id, 'LOGIN_FAILED', 'user', user.id)
             flash('Invalid password', 'danger')
     return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validation
+        if not username or not email or not password:
+            flash('All fields are required', 'danger')
+            return redirect(url_for('register'))
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return redirect(url_for('register'))
+        
+        # Check if user exists
+        existing_user = User.query.filter(
+            (User.username == username) | (User.email == email)
+        ).first()
+        
+        if existing_user:
+            flash('Username or email already exists', 'danger')
+            return redirect(url_for('register'))
+        
+        # Validate password strength
+        temp_user = User()  # Dummy user for validation
+        errors = PasswordValidator.validate(password, temp_user)
+        if errors:
+            for error in errors:
+                flash(error, 'danger')
+            return redirect(url_for('register'))
+        
+        # Create new user (default role: control_owner)
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=PasswordValidator.hash_password(password),
+            role='control_owner',
+            force_password_change=False,  # They set their own password
+            status='active',
+            is_active=True
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        
+        audit_log(new_user.id, 'USER_REGISTERED', 'user', new_user.id)
+        flash('Registration successful! Please log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
 
 @app.route('/force-password-change', methods=['GET', 'POST'])
 @login_required
